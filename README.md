@@ -1,72 +1,72 @@
 # RoboMaster Aim Lab
 
-独立的 RoboMaster 自瞄闭环仿真环境。Godot 提供三维场景、界面和虚拟相机；运动、云台响应、弹道和命中判定由独立 GDScript 模块计算。无需 ROS、工业相机、CAN 或串口。
+A standalone RoboMaster auto-aim closed-loop simulation environment. Godot provides the 3D scene, UI, and virtual camera; motion, gimbal response, ballistics, and hit detection are computed by independent GDScript modules. No ROS, industrial camera, CAN bus, or serial port required.
 
-通过本机共享内存传递控制、反馈和原始相机帧，可以接入自己的 C++、Python 或其他语言自瞄。本仓库只运行仿真，不捆绑检测网络、视觉仓库或实车硬件驱动。
+Control signals, feedback, and raw camera frames are passed via local shared memory, allowing you to plug in your own C++, Python, or other-language auto-aim system. This repo only runs the simulation — it does not bundle a detection network, vision repo, or real-hardware drivers.
 
-原创部分采用 [MIT License](LICENSE)，允许商用、修改和闭源分发，分发时保留版权与许可声明；第三方素材见 [第三方声明](THIRD_PARTY_NOTICES.md)。本项目非 RoboMaster / DJI 官方产品。
+Original work is under the [MIT License](LICENSE) — commercial use, modification, and closed-source distribution are allowed with copyright/license notices preserved. Third-party assets are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). This project is not an official RoboMaster / DJI product.
 
-## 文档导航
+## Documentation Map
 
-- 第一次运行：下面的“启动”与“快速接入”。
-- 接自己的自瞄：[接入指南](docs/integration.md)，包含 Python 接图、C++/OpenCV 适配、内外参和线程建议。
-- C++ 详细接入：[编译与完整示例](docs/cpp_integration.md)，包含文件握手、OpenCV、PnP、控制回读和多线程适配。
-- 自己实现客户端：[完整协议](docs/protocol.md)，包含字段、坐标、时钟、序号、图像握手和失联处理。
-- 复现场景：[配置与命令行参考](docs/configuration.md)，列出所有配置项、默认值与范围。
-- 换模型/贴图：[模型说明](docs/models.md)；授权与来源：[第三方声明](THIRD_PARTY_NOTICES.md)。
+- First run: "Startup" and "Quick Integration" sections below.
+- Connecting your own auto-aim: [Integration Guide](docs/integration.md) — Python frame capture, C++/OpenCV adapter, intrinsics/extrinsics, threading tips.
+- C++ detailed integration: [Build & Full Example](docs/cpp_integration.md) — file handshake, OpenCV, PnP, control readback, multithreading.
+- Implementing your own client: [Full Protocol](docs/protocol.md) — fields, coordinates, clock, sequence numbers, image handshake, disconnect handling.
+- Reproducing scenarios: [Config & CLI Reference](docs/configuration.md) — all config keys, defaults, and ranges.
+- Swapping models/textures: [Model Notes](docs/models.md); licensing and sources: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-## 启动
+## Startup
 
-运行与 IPC 已验证的平台为 **Linux x86_64**，Godot **4.7.2**，使用兼容 OpenGL 的渲染模式。相机模式需要可用的图形会话与 OpenGL 驱动；纯控制/理想观测可无界面运行。需要 Git、Python 3（控制示例仅使用标准库）；不需要 ROS、CUDA 或 OpenVINO。
+The verified platform for running and IPC is **Linux x86_64**, Godot **4.7.2**, with an OpenGL-compatible rendering mode. Camera mode requires a graphics session and OpenGL drivers; pure control/ideal observation can run headless. Requires Git and Python 3 (control demo uses stdlib only); no ROS, CUDA, or OpenVINO needed.
 
 ```bash
 git clone https://github.com/ForgetWW520/rm_aim_sim.git
 cd rm_aim_sim
 python3 tools/setup_godot.py
-# 首次克隆后导入贴图等资源；后续正常运行不需要重复执行。
+# Import textures and assets after first clone; not needed on subsequent runs.
 ./run.sh --headless --editor --import --quit
 ./run.sh
 ```
 
-也可用 Godot 编辑器打开 `project.godot`，等待资源导入后按 F5。`run.sh` 依次使用 `GODOT_BIN`、PATH 中的 `godot`/`godot4`、本地 `.tools/godot`。**Git 仓库不包含引擎二进制**；自动下载脚本只支持 Linux x86_64，且需要能够访问 GitHub Releases。
+You can also open `project.godot` in the Godot editor, wait for asset import, then press F5. `run.sh` looks for Godot in order: `GODOT_BIN` env var, `godot`/`godot4` on PATH, then `.tools/godot` locally. **The Git repo does not include the engine binary**; the auto-download script only supports Linux x86_64 and requires access to GitHub Releases.
 
-下载脚本固定官方版本并校验 SHA256，不安装系统软件。也可以手动从 [Godot 官方站点](https://godotengine.org/download/linux/) 下载，再指定：
+The download script pins the official version and verifies SHA256; it does not install system software. You can also download manually from the [Godot official site](https://godotengine.org/download/linux/) and point to it:
 
 ```bash
 GODOT_BIN=/absolute/path/to/godot ./run.sh
 ```
 
-中文界面使用系统字体，Linux 推荐安装 Noto CJK 字体。
+The Chinese UI uses system fonts; on Linux, installing Noto CJK fonts is recommended.
 
-## 快速接入：先通接口，再接算法
+## Quick Integration: Verify the Interface First, Then Add Your Algorithm
 
-终端一启动图形仿真并打开外部控制：
+**Terminal 1** — start the graphical simulation with external control enabled:
 
 ```bash
 ./run.sh -- --remote
 ```
 
-终端二（仍在本仓库根目录）先检查反馈和固定角度控制，不开火：
+**Terminal 2** (from the repo root) — verify feedback and fixed-angle control, no firing:
 
 ```bash
 python3 tools/control_demo.py --yaw=5 --pitch=3 --duration=3
 ```
 
-看到实际 yaw/pitch 接近设定值后，再单独检查原始相机图像。两个示例是控制端，**不能同时占用同一通道**：
+Once actual yaw/pitch converge to the target values, verify raw camera frames separately. These two demos are both control clients — **they cannot occupy the same channel simultaneously**:
 
 ```bash
-# 只验证取图，不需要 NumPy/OpenCV，不控制云台、不开火。
+# Verify frame capture only — no NumPy/OpenCV needed, no gimbal control, no firing.
 python3 tools/camera_demo.py --no-display --frames=30
 
-# 可选：在虚拟环境安装显示依赖，然后看与自瞄输入一致的画面。
+# Optional: install display deps in a venv, then view the exact image your auto-aim will receive.
 python3 -m venv .tools/camera-venv
 .tools/camera-venv/bin/python -m pip install numpy opencv-python
 .tools/camera-venv/bin/python tools/camera_demo.py
 ```
 
-按 Q / Esc 或 Ctrl+C 退出接图示例。`--no-display` 仅关闭客户端窗口，**仿真仍须图形模式**；仿真 `--headless` 没有像素输出。示例不检测装甲，不代表完成自瞄验收。
+Press Q / Esc or Ctrl+C to exit the camera demo. `--no-display` only closes the client window — **the simulation still requires a graphics session**; simulation `--headless` produces no pixel output. The demos do not detect armor and do not constitute a complete auto-aim acceptance test.
 
-C++ 用户可以直接编译独立示例（需要 OpenCV、nlohmann-json 开发包）：
+C++ users can build the standalone example directly (requires OpenCV and nlohmann-json dev packages):
 
 ```bash
 cmake -S examples/cpp -B .tools/cpp-demo -DCMAKE_BUILD_TYPE=Release
@@ -74,85 +74,85 @@ cmake --build .tools/cpp-demo -j2
 .tools/cpp-demo/sim_client_demo --no-display --frames=30 --duration=10
 ```
 
-依赖安装、固定角度控制和接入自己工程的详细步骤见 [C++ 接入详解](docs/cpp_integration.md)。
+For dependency installation, fixed-angle control, and integrating into your own project, see [C++ Integration Details](docs/cpp_integration.md).
 
-接入自己项目时，最小改动是替换“相机输入”和“云台通信”两处：
+When integrating your own project, the minimum changes are replacing two touch points — "camera input" and "gimbal communication":
 
 ```text
-frame-*.raw + frame.json → 同帧图像/姿态/时间 → 自己的检测/PnP/跟踪/提前量
-                                                  ↓
-state.json ← 实际云台/弹速/统计 ← 仿真 ← command.json（yaw/pitch/fire）
+frame-*.raw + frame.json  →  same-frame image/pose/time  →  your detection/PnP/tracking/lead
+                                                               ↓
+state.json  ←  actual gimbal/muzzle velocity/stats  ←  sim  ←  command.json (yaw/pitch/fire)
 ```
 
-具体代码、标定矩阵、断流保护和验收顺序见 [接入指南](docs/integration.md)。不要把 `truth` 或理想 `camera.armors` 当作真实图像检测结果。
+For concrete code, calibration matrices, stream-loss protection, and acceptance order, see the [Integration Guide](docs/integration.md). Do not use `truth` or the ideal `camera.armors` as real image detection results.
 
-## 先做一次静止靶验证
+## Static Target Validation (Do This First)
 
-1. 默认第一人称，靶车中心位于云台世界原点前方 **4 m**，平移、自转关闭。
-2. 按住 F 或“按住跟踪”，等待云台跟踪装甲。
-3. 继续按住 F，同时按住 Space 或“按住发射”，观察命中计数与绿色弹着点。
-4. 按 V 切换到第三人称后，可右键拖动观察、滚轮缩放。右上角始终显示云台相机。
-5. 开启平移、自转并设置速度，参数修改立即生效，无需点击应用。
+1. Default view is first-person; the target vehicle center is **4 m** in front of the gimbal world origin, with translation and spin disabled.
+2. Hold **F** or "Hold Track" and wait for the gimbal to lock onto the armor.
+3. Continue holding F, then also hold **Space** or "Hold Fire" — watch the hit counter and green impact points.
+4. Press **V** to switch to third-person; right-click-drag to orbit, scroll to zoom. The gimbal camera preview is always shown in the top-right.
+5. Enable translation and spin, set speeds — parameter changes take effect immediately with no Apply button.
 
-按住 F 时持续跟踪，松开后保留最后瞄准角。内置辅助直接读取目标真值，计算重力弹道、平移与旋转提前量，随装甲朝向切换目标，并通过正常云台响应执行；不自动开火。它用于先验证仿真功能，后续外部自瞄接入后可关闭此辅助。
+While F is held, tracking is continuous; releasing it holds the last aiming angle. The built-in assist reads ground-truth target data directly, computes gravity drop, translation lead, and rotation lead, switches targets by armor facing, and executes via normal gimbal response — it does not auto-fire. Use this to verify simulation functionality first; you can disable the assist after connecting your external auto-aim.
 
-快捷键：方向键调整 yaw/pitch，Space 发射，P 暂停/继续，R 重置本轮，V 切换视角，按住 F 连续跟踪。数字输入框中按 Space/F 会确认数值并退出编辑，随后立即发射/跟踪；方向键在输入框中仍用于编辑。修改参数保留仿真时间、统计、在飞弹丸和云台状态；只有点击重置或按 R 才清空本轮，不自动重置或复活。暂停保留统计并取消待出膛指令。启用本机自瞄控制时，本地跟踪与发射不覆盖外部指令。
+**Keyboard shortcuts:** Arrow keys adjust yaw/pitch. Space fires. P pauses/resumes. R resets the current round. V toggles view. Hold F for continuous tracking. Pressing Space/F inside a number input field confirms the value and exits edit mode, then immediately fires/tracks; arrow keys still edit while a field is focused. Changing parameters preserves simulation time, statistics, projectiles in flight, and gimbal state — only clicking Reset or pressing R clears the round. Reset does not happen automatically. Pause preserves statistics and cancels pending fire commands. When external auto-aim control is active, local track and fire do not override external commands.
 
-## 靶车、车型与模型
+## Target Vehicle, Robot Types, and Models
 
-- 靶车平移和自转分别开关；平移速度、加速度、方向、往返范围和角速度可设置。
-- 平移方向在世界系中定义，往返半程是相对配置中心的最大偏移。例如半程 1.5 m 对应总行程 3 m。启动和运行时修改运动参数后从静止加速，接近端点时按制动距离减速到零，再换向加速；短行程会自动采用达不到设定最高速的三角速度曲线。即时修改不会改变配置的轨迹中心，超出新范围的位置会限制到边界。
-- 预设步兵 3/4/5、英雄 1、哨兵 7，可分别切换红蓝方。英雄采用大装甲，模块外形 **235 × 127 mm**，其余采用小装甲 **140 × 125 mm**，与 [官方装甲模块参数](https://www.robomaster.com/en-US/products/components/detail/2614) 一致。
-- 灯条中心间距默认大装甲 230 mm、小装甲 135 mm，灯条长度 56 mm。这是视觉关键点几何，与整个模块的外形尺寸分开设置。
-- 所有内置装甲使用下载的实际图案贴图，不使用字体生成编号。哨兵逻辑编号为 7，图案为炮塔标识。面板从对应贴图采样黑色底色，使用相同的不受光照影响的颜色；资源与来源见 [模型说明](docs/models.md)。
-- 内置黑板使用裁角和侧边灯槽轮廓；灯条加入仅限装甲的阵营色局部光晕，灭灯时同时关闭，不改变弹丸材质、灯条几何或命中区。第一人称与相机预览复用同一次 3D 渲染。
-- 所有预设均只显示四块装甲，没有车体显示或隐藏的车体碰撞。四块装甲绕共同中心平移、旋转，用于自瞄测试。
-- 按 2026 制作规范图 3-16/3-17，黑色面板宽为小装甲 135 mm、大装甲 230 mm；侧灯计入外宽后分别为 140/235 mm，高为 125/127 mm。板面向内倾斜 15°。灯条、模块外形、近似命中区分别配置，装甲也可替换为 GLB/glTF。
-- 四块装甲沿前后左右方向安装，相邻方向相差 90°，两组对向中心连线垂直并经过共同中心。“装甲伸展”滑条向左收缩、向右展开，所有兵种默认 **550 mm**，上限统一为 **600 mm**（本项目设置）。该值是包含板体、侧灯、厚度和倾角的旋转外廓直径，保证任意旋转角度的水平外廓均不超过上限，不是对向装甲中心距。最小值随装甲尺寸及高度差动态计算，保留 1 mm 几何间隙，并保守保证相邻模块位于彼此正面平面后方，避免穿插与遮挡。
-- “基准装甲下沿”“两组装甲高度差”使用滑条，立即生效。依据 [2026 制作规范 V1.3.0 第 3.6 节 S154/S155](https://bbs-web-static.robomaster.com/715e2519e5384666a5d13edda17c6b831770696773838/RoboMaster%202026%20%E6%9C%BA%E7%94%B2%E5%A4%A7%E5%B8%88%E9%AB%98%E6%A0%A1%E7%B3%BB%E5%88%97%E8%B5%9B%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%88%B6%E4%BD%9C%E8%A7%84%E8%8C%83%E6%89%8B%E5%86%8CV1.3.0%EF%BC%8820260209%EF%BC%89.pdf#page=74)，任意两块下沿高度差 ≤100 mm、下沿离地 >0 且 ≤400 mm。界面保留 1 mm 离地余量，并按另一组装甲高度动态限制滑条，内部按模块高度和倾角换算中心位置。默认基准组下沿 **200 mm**，高度差 **-100 mm**，另一组下沿为 **100 mm**。偶数编号装甲使用基准中心高度，奇数编号装甲叠加高度差；滑条用于调整测试安装姿态，不模拟机器人自动往复升降机构。
-- 有效受击宽高与模块外形、灯条几何分别配置。默认矩形受击区为小装甲 135 × 125 mm、大装甲 230 × 127 mm，是可调的仿真近似，不作为官方精确有效受击区域声明。
-- 模型文件只改变显示，不改变命中区。内置贴图由兵种决定、灯条颜色由阵营决定；自定义装甲模型自行提供图案，并需遵循 `Team`/`Lightbar` 节点命名约定才能自动换色及灭灯。
+- Target vehicle translation and spin can each be toggled independently; translation speed, acceleration, direction, travel range, and angular velocity are all configurable.
+- Translation direction is defined in world space; half-travel is the maximum offset from the configured center. For example, half-travel 1.5 m = 3 m total stroke. Changing motion parameters at startup or runtime causes acceleration from rest, deceleration to zero near endpoints, then reversal; short strokes automatically use a triangular velocity profile that never reaches the set max speed. Immediate changes do not move the trajectory center; positions outside the new range are clamped to the boundary.
+- Presets: Infantry 3/4/5, Hero 1, Sentry 7 — each switchable between red and blue. Hero uses large armor (**235 × 127 mm**); all others use small armor (**140 × 125 mm**), matching [official armor module specs](https://www.robomaster.com/en-US/products/components/detail/2614).
+- Default light bar center spacing: large armor 230 mm, small armor 135 mm; light bar length 56 mm. These are the visual keypoint geometry values, configured separately from the overall module dimensions.
+- All built-in armors use downloaded real-pattern textures, not font-generated numbers. The Sentry's logical number is 7 and uses a turret pattern. Panels sample a black background from the corresponding texture using the same unlit color; assets and sources are listed in [Model Notes](docs/models.md).
+- The built-in blackboard uses a chamfered-corner and side-slot-channel outline; light bars have an armor-only faction-colored local halo that turns off when the bar is out, without changing projectile material, light bar geometry, or hit zone. First-person and camera preview share the same single 3D render pass.
+- All presets show only four armor plates — no chassis mesh and no hidden chassis collision. The four armors translate and rotate around a shared center for auto-aim testing.
+- Per the 2026 fabrication spec figures 3-16/3-17: black panel width is 135 mm (small) / 230 mm (large); including side lights the outer widths are 140/235 mm, heights are 125/127 mm. Panels tilt inward 15°. Light bar, module outline, and approximate hit zone are configured separately; armor panels can be replaced with GLB/glTF.
+- Four armors are mounted front/back/left/right, 90° apart, with the two center-lines perpendicular and intersecting at the shared center. The "Armor Extension" slider collapses left and expands right; default **550 mm** for all types, maximum **600 mm** (project setting). This value is the rotation envelope diameter — including panel body, side lights, thickness, and tilt angle — guaranteeing the horizontal envelope at any rotation angle never exceeds the limit. It is not the center-to-center distance between facing armors. The minimum value is computed dynamically from armor dimensions and height offset, with a 1 mm geometric clearance, conservatively ensuring adjacent modules stay behind each other's front plane to avoid interpenetration and occlusion.
+- "Reference armor bottom edge" and "armor height offset between the two groups" use sliders that take effect immediately. Per [2026 Fabrication Spec V1.3.0 §3.6 S154/S155](https://bbs-web-static.robomaster.com/715e2519e5384666a5d13edda17c6b831770696773838/RoboMaster%202026%20%E6%9C%BA%E7%94%B2%E5%A4%A7%E5%B8%88%E9%AB%98%E6%A0%A1%E7%B3%BB%E5%88%97%E8%B5%9B%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%88%B6%E4%BD%9C%E8%A7%84%E8%8C%83%E6%89%8B%E5%86%8CV1.3.0%EF%BC%8820260209%EF%BC%89.pdf#page=74): bottom-edge height difference between any two armors ≤ 100 mm; bottom edge > 0 mm and ≤ 400 mm above ground. The UI preserves a 1 mm ground clearance and dynamically limits the slider based on the other group's height; internally, center position is computed from module height and tilt angle. Defaults: reference group bottom edge **200 mm**, height offset **−100 mm**, second group bottom edge **100 mm**. Even-numbered armors use the reference center height; odd-numbered armors add the height offset. The sliders adjust the test mounting posture and do not simulate an automatic lift mechanism.
+- Effective hit width/height is configured separately from module outline and light bar geometry. Default rectangular hit zones: small armor 135 × 125 mm, large armor 230 × 127 mm — these are adjustable simulation approximations and are not an authoritative official hit-zone specification.
+- Model files change display only, not hit zones. Built-in textures are determined by robot type; light bar color is determined by faction. Custom armor models must supply their own patterns and follow the `Team`/`Lightbar` node naming convention for automatic color-switching and light-out behavior.
 
-## 血量与伤害
+## HP and Damage
 
-默认按 [2026 高校联盟赛 RMUL 规则 V1.2.0](https://bbs.robomaster.com/wiki/20204847/809872) 的 **3V3 对抗赛**、无增益状态设置：
+Defaults follow the **3v3 combat match** of the [2026 RMUL University League Rules V1.2.0](https://bbs.robomaster.com/wiki/20204847/809872), no buff state:
 
-| 靶车 | 默认血量 | 装甲 |
+| Target | Default HP | Armor |
 |---|---:|---|
-| 英雄 1 | 350 HP | 大装甲 |
-| 步兵 3/4/5 | 350 HP（血量优先） | 小装甲 |
-| 哨兵 7 | 400 HP | 小装甲 |
+| Hero 1 | 350 HP | Large |
+| Infantry 3/4/5 | 350 HP (HP-priority mode) | Small |
+| Sentry 7 | 400 HP | Small |
 
-步兵功率优先是 300 HP；RMUL 步兵对抗赛是 200 HP，可在血量输入框自行设置。当前发射器固定使用 **17 mm 弹丸，单发基础伤害 20 HP**，伤害可修改。规则中的 42 mm 弹丸基础伤害为 200 HP，但本仿真尚未实现 42 mm 发射器；切换英雄靶车只改变靶车外形与参数。
+Power-priority Infantry is 300 HP; RMUL infantry combat is 200 HP — set via the HP input field. The launcher is fixed at **17 mm projectiles, 20 HP base damage per shot**; damage is editable. The 42 mm projectile (200 HP base) from the rules is not yet implemented; switching to the Hero target only changes the target's appearance and parameters.
 
-装甲命中扣除血量，最低为 0；末发只统计实际扣除量。归零后灯条熄灭，理想相机不再输出装甲灯条关键点，靶车停在死亡位置与角度；平移、自转开关和速度设置保持不变，重置后恢复血量并按原设置继续运动。几何命中仍计入命中率，但不再扣血或重复计击毁。当前不模拟完整战亡断电、复活读条、增益、射击热量，以及真实装甲的检测间隔和触发阈值。
+Armor hits deduct HP, floored at 0; the final shot only counts actual HP deducted. At zero HP the light bars go dark, the ideal camera stops outputting armor keypoints, and the target stays at its death position and angle. Translation/spin toggles and speed settings are preserved; after reset HP is restored and motion resumes. Geometric hits still count toward hit rate but no longer deduct HP or count kills. The current simulation does not model full combat death/power-off, respawn countdown, buffs, shot heat, or real armor detection intervals and trigger thresholds.
 
-存活时装甲被弹丸命中，仅该块灯条和局部光晕熄灭 **50 ms 仿真时间**，随后恢复原阵营色（蓝→灭→蓝、红→灭→红）；连续命中从最后一次命中重新计时，暂停时冻结计时，落地等未命中不触发。板体和数字贴图不消失，第一/第三人称、相机预览和共享内存图像同步表现；灭灯期间该块不输出理想灯条角点。致死命中后所有灯条持续熄灭，不会到时重亮。50 ms 为本项目表现参数，并非官方检测间隔；不改变碰撞计分和扣血规则。
+When a living armor plate is hit by a projectile, only that plate's light bar and halo go dark for **50 ms simulation time**, then restore to faction color (blue→off→blue, red→off→red). Consecutive hits restart the timer from the last hit; the timer freezes when paused; ground hits and misses do not trigger it. Panel and number textures do not disappear; first-person, third-person, camera preview, and shared-memory images all reflect this simultaneously; during the dark period that plate does not output ideal keypoints. A lethal hit keeps all bars permanently dark. The 50 ms is a project display parameter, not an official detection interval; it does not change collision scoring or HP deduction rules.
 
-血量框平时显示当前血量，修改时同时设置当前血量与上限，立即生效并可恢复灯条；切换兵种恢复对应默认血量，两者均保留累计统计。按 R 恢复配置血量并清空本轮统计。恢复血量或重置会清除旧的命中闪烁。配置 `target.max_health=-1` 表示采用兵种规则血量，非负整数可覆盖，0 表示初始即战亡。
+The HP field shows current HP at rest; editing it sets both current HP and maximum HP simultaneously, takes effect immediately, and can restore light bars. Switching robot type resets to the type's default HP; both actions preserve cumulative statistics. Pressing R restores the configured HP and clears the round statistics. Restoring HP or resetting clears any pending hit-flash state. Config key `target.max_health=-1` means use the robot-type rule HP; a non-negative integer overrides it; 0 means the target starts dead.
 
-## 云台、弹丸与统计口径
+## Gimbal, Projectiles, and Statistics
 
-云台使用带速度、加速度限制的二阶伺服模型，支持角度、角速度、角加速度输入。控制指令是目标值；相机、反馈和枪口使用实际姿态。云台是固定位置的双轴云台，首版不模拟我方底盘运动。
+The gimbal uses a second-order servo model with velocity and acceleration limits, accepting angle, angular velocity, and angular acceleration inputs. Control commands specify target values; camera, feedback, and muzzle use actual pose. This is a fixed-position two-axis gimbal; the initial version does not simulate friendly chassis motion.
 
-开火许可持续为 true 时按射频生成触发事件，经过发射延迟后，使用**出膛时**的实际枪口位置与方向发射。解除 `control`、失联或暂停会取消待出膛事件；解除 `fire` 停止新增触发，已接受的触发仍会完成。
+When the fire enable is continuously true, trigger events are generated at the set rate of fire; after the fire delay, the projectile is launched using the **actual muzzle position and direction at the moment of departure**. Releasing `control`, losing connection, or pausing cancels pending departure events; releasing `fire` stops new triggers, but already-accepted triggers still complete.
 
-弹丸按官方 17mm 荧光弹丸的标称直径 16.8 mm 显示，球体和拖尾为固定荧光绿；判定仍采用受重力作用的质点与解析抛物线。与移动、旋转装甲的连续交叉在不大于 1 ms、旋转角不大于 0.005 rad 的子步中求根；有效装甲只在外侧面计分。当前没有车体碰撞，每发弹丸按最早的装甲或地面碰撞计一次结果。地面命中、离靶清除和寿命超时计为未命中。拖尾表示最近 18 ms 的飞行轨迹。[官方弹丸参数](https://www.robomaster.com/zh-CN/products/components/detail/2571)
+Projectiles are displayed at the official 17 mm fluorescent projectile nominal diameter of 16.8 mm, with a fixed fluorescent-green sphere and trail; hit detection still uses a gravity-affected point mass and analytic parabola. Continuous intersection with moving/rotating armor is solved in sub-steps of ≤ 1 ms / ≤ 0.005 rad rotation angle; only the outer face of active armor scores. No chassis collision; each projectile scores exactly once against the earliest armor or ground hit. Ground hits, out-of-bounds clears, and lifetime timeouts count as misses. The trail shows the last 18 ms of flight trajectory. [Official projectile specs](https://www.robomaster.com/zh-CN/products/components/detail/2571)
 
-- `fired`：已经实际出膛的数量，待出膛不计。
-- `resolved`：已有最终结果的弹丸数量，包括装甲、落地、离靶清除、超时。
-- **命中率 = 命中装甲数 / resolved**，正在飞行的弹丸暂不进入分母。
-- 始终满足 `fired = resolved + in_flight`；命中率之外同时显示发射数、飞行数、命中/仿真秒和首次命中时间。
-- `damage` 为累计实际扣血，`kills` 为血量从正数变为 0 的次数；伤害值在弹丸出膛时确定，修改伤害不影响已出膛弹丸。
-- 未命中弹丸飞出包含靶车完整往返范围与装甲尺寸的边界后，按 `expired` 结算并清除；不截断仍可能命中远处靶车的弹丸。
-- 命中装甲或地面后，根据碰撞法向反射并衰减速度，显示最多 0.8 仿真秒的反弹效果，地面继续低幅弹跳；不再生成悬空的固定弹着点小球。飞行、拖尾和反弹统一使用无光照高亮的荧光绿材质，避免发白。反弹是显示效果，不重复计分或扣血；衰减系数为仿真表现参数，并非官方给定值。清理保留本轮计数与事件。
-- 导出 JSON 包含累计统计、本轮配置和最近 128 条发射/碰撞事件；相机 PNG、导出结果放在被忽略的 `captures/`。
+- `fired`: number of projectiles that have actually departed — pending departures not counted.
+- `resolved`: projectiles with a final result — armor, ground, out-of-bounds clear, timeout.
+- **Hit rate = armor hits / resolved** — projectiles still in flight are not yet in the denominator.
+- Always satisfies `fired = resolved + in_flight`; alongside hit rate, the display also shows shots fired, in-flight count, hits/sim-second, and time of first hit.
+- `damage`: cumulative actual HP deducted. `kills`: number of times HP went from positive to 0. Damage is determined at departure; editing damage does not affect already-departed projectiles.
+- Miss projectiles are cleared and scored as `expired` once they exit the bounding volume that contains the full target travel range and armor dimensions; projectiles that could still hit a distant target are not prematurely cut off.
+- After hitting armor or ground, projectiles reflect off the collision normal with velocity attenuation and show a bounce effect for up to 0.8 sim-seconds, with continuing low-amplitude bounces on the ground. No fixed floating impact-point spheres are generated. Flight, trail, and bounces all use an unlit fluorescent-green material to avoid washing out. Bounces are a visual effect only — no re-scoring or re-damage. The attenuation coefficient is a simulation display parameter, not an official value. Cleanup preserves round counts and events.
+- Exported JSON contains cumulative statistics, current round config, and the last 128 fire/collision events; camera PNGs and export results are placed in the gitignored `captures/` directory.
 
-首版不模拟空气阻力、弹速波动、散布与运动模糊；相机仅提供简化曝光外观，命中率用于算法和接口验证，不直接等同实车命中率。
+The initial version does not simulate air resistance, muzzle velocity variance, dispersion, or motion blur. The camera provides only a simplified exposure appearance. Hit rate is for algorithm and interface validation and does not directly correspond to real-hardware hit rate.
 
-## 配置与接入
+## Configuration and Integration
 
-默认配置在 [configs/default.cfg](configs/default.cfg)，使用 Godot ConfigFile 格式。界面参数即时生效，保存当前有效配置到 `user://last_scenario.cfg`，界面会显示绝对路径。保存的是设置血量，不保存战损后的当前血量。
+Default config is in [configs/default.cfg](configs/default.cfg) using Godot ConfigFile format. UI parameters take effect immediately; the current active config is saved to `user://last_scenario.cfg` (absolute path shown in the UI). The saved HP is the configured HP, not the current combat HP.
 
 ```bash
 ./run.sh -- --config=/absolute/path/to/scenario.cfg
@@ -161,25 +161,25 @@ state.json ← 实际云台/弹速/统计 ← 仿真 ← command.json（yaw/pitc
 python3 tools/control_demo.py --yaw=0 --pitch=0 --fire --duration=5
 ```
 
-提供 `translate.cfg`（仅平移）、`spin.cfg`（仅旋转）、`combined.cfg`（平移加旋转）。配置文件可只写需要覆盖的参数，其他字段继承默认值。
+Provided presets: `translate.cfg` (translation only), `spin.cfg` (spin only), `combined.cfg` (translation + spin). Config files only need to specify parameters you want to override; all other fields inherit defaults.
 
-仅支持 Linux 同机、同用户的进程，不监听 TCP/UDP 端口。图形模式需打开“本机自瞄控制”；无界面模式通过 `--remote` 打开。仿真 `[ipc].channel` 与视觉 `[sim].channel` 均默认 `default`，数据通过 `/dev/shm/rm_aim_sim_default/` 交换；同通道只允许一个仿真和一个控制端。`control_demo.py` 是收发接口示例，角度参数单位为度，内部转换为协议使用的弧度。
+Only same-machine, same-user processes on Linux are supported; no TCP/UDP ports are opened. Graphical mode requires "Local Auto-Aim Control" to be enabled; headless mode uses `--remote`. Both simulation `[ipc].channel` and vision `[sim].channel` default to `default`; data is exchanged via `/dev/shm/rm_aim_sim_default/`. Only one simulation and one control client are allowed per channel. `control_demo.py` is a send/receive interface example; angle parameters are in degrees and are internally converted to the protocol's radians.
 
-反馈包含实际姿态和四元数、弹速、仿真时间、理想装甲关键点、完整目标真值、累计统计和最近事件。真值用于评分和调试，应与实际自瞄使用的观测数据分开。协议、坐标与时钟约定见 [docs/protocol.md](docs/protocol.md)。
+Feedback includes actual pose and quaternion, muzzle velocity, simulation time, ideal armor keypoints, full target ground truth, cumulative statistics, and recent events. Ground truth is for scoring and debugging and should be kept separate from the observation data your actual auto-aim uses. Protocol, coordinate conventions, and clock conventions are in [docs/protocol.md](docs/protocol.md).
 
-第一人称主画面显示原始渲染，不随曝光滑条变化；右上相机预览显示曝光后的图像，与自瞄收到的像素一致。两路复用一次 3D 渲染，仅为相机输出增加 2D 处理。
+The first-person main view shows raw rendering unaffected by the exposure slider; the top-right camera preview shows the post-exposure image, which matches the pixels your auto-aim receives. Both share a single 3D render pass — only the camera output adds a 2D processing step.
 
-虚拟相机默认 1440×1080、垂直视场角 45°，与视觉仓库 `configs/sim.conf` 一致。左侧“相机”可以选择常用分辨率，也可以直接输入宽高和视场角，立即生效并保留本轮状态与统计。“相机曝光增益”滑条范围为 0–4×，默认 0.4×；低于 1 减少曝光，0 全黑，高于 1 增加曝光。它仅作用于相机预览和共享内存图像，不改变场景光照，并随 `[camera].brightness_gain` 保存。简化成像模型将内置灯条的自发光与背景区分，先曝光再饱和截断：例如 0.1× 时背景和数字显著变暗，灯条仍可高亮。这是曝光外观近似，不模拟光学 HDR 标定、噪声或运动模糊。切换分辨率或视场角后自瞄侧的分辨率和内参也必须匹配；不对自瞄输入做特殊坐标处理。共享内存按请求提供无压缩 RGB/RGBA 和同帧姿态、时间与标定，视觉端 mmap 后转成自有 BGR 图像，不做 JPEG 编解码：
+The virtual camera defaults to 1440×1080, 45° vertical FOV, matching `configs/sim.conf` in the vision repo. The left-side "Camera" panel lets you select common resolutions or type custom width/height and FOV directly, taking effect immediately while preserving round state and statistics. The "Camera Exposure Gain" slider ranges from 0–4×, default 0.4×; below 1× reduces exposure, 0 = full black, above 1× increases exposure. It only affects the camera preview and shared-memory image — scene lighting is unchanged — and is saved as `[camera].brightness_gain`. The simplified imaging model separates built-in light bar self-emission from background, then applies exposure and saturation clipping: at 0.1× the background and numbers darken significantly while light bars can still be bright. This is an exposure appearance approximation; it does not model optical HDR calibration, noise, or motion blur. After changing resolution or FOV, the auto-aim side's resolution and intrinsics must also be updated; no special coordinate transformation is applied to auto-aim input. Shared memory provides uncompressed RGB/RGBA and same-frame pose, time, and calibration on request; the vision client mmaps and converts to its own BGR image — no JPEG encode/decode:
 
 ```bash
 ./run.sh -- --config=res://configs/vision.cfg --remote
-# 可选：如果自己的 rm_vision 已有对应适配入口，在其根目录按其文档编译后运行：
+# Optional: if your rm_vision already has a matching adapter entry, build and run from its root per its docs:
 ./build/auto_aim_sim configs/sim.conf
 ```
 
-上面的 `auto_aim_sim`（以及多线程 `mt_standard_sim`）和 `--ideal` 是外部视觉项目的入口/选项，**不由本仓库提供**，不是运行仿真的前置依赖。理想关键点只适合后端诊断，可以配合无界面仿真；只按朝向与视场筛选，未执行任意外部模型的逐像素遮挡检测。
+`auto_aim_sim` (and multi-threaded `mt_standard_sim`) and `--ideal` above are entry points/options of an external vision project — **they are not provided by this repo** and are not prerequisites for running the simulation. Ideal keypoints are for backend diagnostics only and can be used with headless simulation; they are filtered by facing angle and FOV only, with no per-pixel occlusion detection from any external model.
 
-## 验证
+## Verification
 
 ```bash
 ./run.sh --headless --script res://tests/run_tests.gd
@@ -188,35 +188,40 @@ python3 tests/integration.py --godot "$PWD/.tools/godot"
 ./run.sh --script res://tests/ui_smoke.gd -- --no-ipc --camera-only
 ```
 
-第一条运行独立仿真核心检查；第二条实际启动无界面仿真并通过共享内存交换状态和指令，验证“指令 → 实际姿态 → 出膛 → 命中 → 扣血 → 统计”及失联停火；第三条打开图形窗口，检查兵种贴图、红蓝切换、高度滑条、暂停、数字输入后发射、连续跟踪、绿色反弹及相机读回，并自动退出。第四条只验证相机分辨率、亮度增益、预览与共享内存像素一致性，不依赖键盘焦点。集成测试使用独立临时通道，不占用默认通道。
+1. Runs standalone simulation core checks.
+2. Actually launches headless simulation and exchanges state and commands via shared memory, verifying the full chain: command → actual pose → departure → hit → HP deduction → statistics, plus disconnect fire-stop.
+3. Opens a graphics window and checks robot-type textures, red/blue switching, height sliders, pause, fire-after-number-input, continuous tracking, green bounces, and camera readback, then auto-exits.
+4. Verifies camera resolution, brightness gain, and preview/shared-memory pixel consistency only — no keyboard focus dependency.
 
-## 目录
+Integration tests use an isolated temporary channel and do not occupy the default channel.
+
+## Directory Structure
 
 ```text
-scripts/simulation.gd     独立的运动、云台、弹丸、碰撞与计分
-scripts/aim_assist.gd     仿真内置真值跟踪辅助与弹道提前量
-scripts/bridge.gd         本机控制邮箱、序号校验和失联处理
-scripts/camera_stream.gd  按请求发布原始共享内存图像与同帧元数据
-scripts/local_ipc.gd      tmpfs 原子发布与仿真实例互斥
-scripts/world_view.gd     三维显示与相机纹理复用
-scripts/visual_assets.gd  可替换 GLB/glTF 加载与尺寸归一化
-scripts/presets.gd        车型、编号与红蓝配置
-scripts/main.gd           场景入口、参数界面和手动操作
-configs/                  可复现的场景配置
-assets/models/            保留的历史参考车体（当前不加载）
-assets/third_party/       上游许可证与固定版本来源清单
-tests/                    核心、共享内存闭环和图形验收
-tools/                    运行环境、模型下载与控制端示例
+scripts/simulation.gd     Standalone motion, gimbal, projectile, collision, and scoring
+scripts/aim_assist.gd     Built-in ground-truth tracking assist and ballistic lead
+scripts/bridge.gd         Local control mailbox, sequence validation, and disconnect handling
+scripts/camera_stream.gd  Publishes raw shared-memory images and same-frame metadata on request
+scripts/local_ipc.gd      tmpfs atomic publishing and simulation instance mutex
+scripts/world_view.gd     3D display and camera texture reuse
+scripts/visual_assets.gd  Replaceable GLB/glTF loading and size normalization
+scripts/presets.gd        Robot types, numbers, and red/blue configuration
+scripts/main.gd           Scene entry point, parameter UI, and manual controls
+configs/                  Reproducible scenario configs
+assets/models/            Retained historical reference chassis (not currently loaded)
+assets/third_party/       Upstream licenses and pinned-version source list
+tests/                    Core, shared-memory closed-loop, and graphics acceptance tests
+tools/                    Runtime environment, model download, and control client examples
 ```
 
-## 已知边界
+## Known Limitations
 
-- IPC 仅支持 Linux 同机、同用户；没有 ROS topic、CAN、串口或跨机器 TCP/UDP 服务。其他系统上打开场景不等于支持该 IPC。
-- 默认目标是四块装甲，不是完整机器人；没有车体碰撞、完整遮挡、我方底盘运动、空气阻力、散布、相机噪声或运动模糊。
-- 相机曝光为简化外观模型；云台为带限速/限加速度的二阶模型，不等于实车辨识模型。第一人称主画面不随曝光改变，右上相机预览才是自瞄输入。
-- 碰撞与时间为固定步进，但进程调度、渲染、读回和拷贝不是硬实时。换向预测、检测稳定性、控制前馈等仍由接入的算法负责。
-- 项目用于接口与算法调试，不保证任何检测模型直接适配仿真外观，也不承诺仿真命中率等于实车命中率。先按[验收步骤](docs/integration.md#验收顺序)分别验证通信、识别、解算、跟踪、控制和射击。
+- IPC is Linux same-machine, same-user only; no ROS topics, CAN, serial, or cross-machine TCP/UDP.
+- The default target is four armor plates, not a full robot; no chassis collision, full occlusion, friendly chassis motion, air resistance, dispersion, camera noise, or motion blur.
+- Camera exposure is a simplified appearance model; the gimbal is a second-order model with rate/acceleration limits, not an identified real-hardware model. The first-person main view is unaffected by exposure; the top-right camera preview is what the auto-aim actually receives.
+- Collision and time use fixed stepping, but process scheduling, rendering, readback, and copy are not hard real-time. Reversal prediction, detection stability, control feedforward, etc. remain the responsibility of the connected algorithm.
+- This project is for interface and algorithm debugging; it does not guarantee any detection model will directly fit the simulation appearance, nor that simulation hit rate equals real-hardware hit rate. Follow the [acceptance sequence](docs/integration.md#验收顺序) to verify communication, detection, pose estimation, tracking, control, and firing separately.
 
-## 反馈问题
+## Reporting Issues
 
-请在 [GitHub Issues](https://github.com/ForgetWW520/rm_aim_sim/issues) 附上 Linux/Godot 版本、启动命令、场景配置、日志、预期和实际结果。相机问题请附自瞄收到的图像及 `frame.json` 的分辨率、K、sim_time；控制问题请附下发指令和实际姿态，注意删去个人路径、令牌等敏感信息。
+Please open a [GitHub Issue](https://github.com/ForgetWW520/rm_aim_sim/issues) and include your Linux/Godot version, startup command, scenario config, logs, and expected vs. actual behavior. For camera issues, attach the image your auto-aim received plus the resolution, K matrix, and `sim_time` from `frame.json`. For control issues, attach the issued commands and actual pose. Remove personal paths, tokens, and other sensitive information before posting.

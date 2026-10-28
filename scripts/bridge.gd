@@ -11,7 +11,7 @@ var bound = false
 var last_sequence = -1
 var last_receive_usec = 0
 var timeout = 0.25
-var status = "本地手动控制"
+var status = "Local manual control"
 var received = 0
 var rejected = 0
 var elapsed = 0.0
@@ -27,7 +27,7 @@ func setup(simulation: RefCounted) -> Error:
 	var error = ipc.setup(config.channel)
 	bound = error == OK
 	if not bound:
-		status = "本机 IPC 启动失败：%d" % error
+		status = "Local IPC setup failed: %d" % error
 	return error
 
 
@@ -39,14 +39,14 @@ func set_enabled(value: bool) -> void:
 	last_sequence = -1
 	last_receive_usec = 0
 	model.stop()
-	status = "等待外部指令" if enabled else "本地手动控制"
+	status = "Waiting for external command" if enabled else "Local manual control"
 
 
 func reset_session() -> void:
 	last_sequence = -1
 	last_receive_usec = 0
 	elapsed = interval
-	status = "等待外部指令" if enabled else "本地手动控制"
+	status = "Waiting for external command" if enabled else "Local manual control"
 	last_command = ""
 
 
@@ -106,7 +106,7 @@ func accept_command(value: Variant, now_usec: int) -> bool:
 	last_sequence = int(sequence)
 	last_receive_usec = now_usec
 	received += 1
-	status = "外部控制 · seq %d" % last_sequence
+	status = "External control · seq %d" % last_sequence
 	return true
 
 
@@ -114,7 +114,7 @@ func check_timeout(now_usec: int) -> void:
 	if enabled and last_receive_usec > 0 and (now_usec - last_receive_usec) * 1e-6 > timeout:
 		model.stop()
 		last_receive_usec = 0
-		status = "指令超时 · 已停止控制和发射"
+		status = "Command timeout · control and fire stopped"
 
 
 func close() -> void:

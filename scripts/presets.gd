@@ -5,19 +5,19 @@ const MAX_EXTENT = 0.600
 const DEFAULT_LOWER_EDGE = 0.200
 
 const ROBOTS = {
-	"infantry_3": {"label": "步兵 3", "number": "3", "width": 0.135, "height": 0.125,
+	"infantry_3": {"label": "Infantry 3", "number": "3", "width": 0.135, "height": 0.125,
 		"module_width": 0.140, "module_height": 0.125, "max_health": 350,
 		"sticker": "res://assets/stickers/infantry_3.png", "sticker_region": Rect2(110, 30, 330, 440)},
-	"infantry_4": {"label": "步兵 4", "number": "4", "width": 0.135, "height": 0.125,
+	"infantry_4": {"label": "Infantry 4", "number": "4", "width": 0.135, "height": 0.125,
 		"module_width": 0.140, "module_height": 0.125, "max_health": 350,
 		"sticker": "res://assets/stickers/infantry_4.png", "sticker_region": Rect2(110, 30, 335, 445)},
-	"infantry_5": {"label": "步兵 5", "number": "5", "width": 0.135, "height": 0.125,
+	"infantry_5": {"label": "Infantry 5", "number": "5", "width": 0.135, "height": 0.125,
 		"module_width": 0.140, "module_height": 0.125, "max_health": 350,
 		"sticker": "res://assets/stickers/infantry_5.png", "sticker_region": Rect2(110, 30, 330, 445)},
-	"hero": {"label": "英雄 1", "number": "1", "width": 0.23, "height": 0.127,
+	"hero": {"label": "Hero 1", "number": "1", "width": 0.23, "height": 0.127,
 		"module_width": 0.235, "module_height": 0.127, "max_health": 350,
 		"sticker": "res://assets/stickers/hero.png", "sticker_region": Rect2(220, 45, 360, 370)},
-	"sentry": {"label": "哨兵 7", "number": "7", "width": 0.135, "height": 0.125,
+	"sentry": {"label": "Sentry 7", "number": "7", "width": 0.135, "height": 0.125,
 		"module_width": 0.140, "module_height": 0.125, "max_health": 400,
 		"sticker": "res://assets/stickers/sentry.png", "sticker_region": Rect2(110, 85, 400, 375)},
 }

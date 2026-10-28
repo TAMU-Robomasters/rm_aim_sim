@@ -75,7 +75,7 @@ func _ready() -> void:
 		if error != OK:
 			set_process(false)
 			set_physics_process(false)
-			push_error(bridge.status + " · 请关闭同通道仿真或选择其他 ipc.channel")
+			push_error(bridge.status + " · Close the same-channel simulation or choose a different ipc.channel")
 			get_tree().quit(2)
 			return
 	else:
@@ -166,7 +166,7 @@ func _local_command(dt: float) -> void:
 			command[key] = solution[key]
 	model.set_command(command)
 	if was_tracking and not tracking_held:
-		message_label.text = "已结束连续跟踪 · 保留最后瞄准角"
+		message_label.text = "Continuous tracking ended · last aim angle retained"
 
 
 func _input(event: InputEvent) -> void:
@@ -261,9 +261,9 @@ func _build_ui() -> void:
 	scroll.add_child(column)
 	var title = _label("AIM LAB", 30, Color("5be2d4"))
 	column.add_child(title)
-	column.add_child(_label("RoboMaster · 自瞄仿真", 14, Color("91acbb")))
-	pause_button = _add_button(column, "P  暂停", _toggle_pause)
-	_section(column, "01  靶车与阵营")
+	column.add_child(_label("RoboMaster · Auto-Aim Sim", 14, Color("91acbb")))
+	pause_button = _add_button(column, "P  Pause", _toggle_pause)
+	_section(column, "01  Target & Team")
 	robot_select = OptionButton.new()
 	for robot in Presets.ROBOTS:
 		robot_select.add_item(Presets.ROBOTS[robot].label)
@@ -271,58 +271,58 @@ func _build_ui() -> void:
 	robot_select.item_selected.connect(_robot_selected)
 	column.add_child(robot_select)
 	team_select = OptionButton.new()
-	team_select.add_item("蓝方装甲")
-	team_select.add_item("红方装甲")
+	team_select.add_item("Blue Armor")
+	team_select.add_item("Red Armor")
 	column.add_child(team_select)
-	_add_number(column, "target.max_health", "设置血量 / HP", 0, 10000, 1)
-	_add_number(column, "target.center.x", "初始距离 / m", 1, 20, 0.1)
-	_add_slider(column, "target.center.z", "基准装甲下沿", 0.001, 0.4)
-	_add_slider(column, "target.radius", "装甲伸展", 0.05, Presets.MAX_EXTENT)
-	_add_slider(column, "target.height_difference", "两组装甲高度差", -0.1, 0.1)
-	column.add_child(_label("下沿离地 1–400 mm · 高度差 ≤100 mm", 12, Color("91acbb")))
-	_add_toggle(column, "target.translate", "开启平移")
-	_add_number(column, "target.speed", "平移速度 / m·s⁻¹", 0, 10, 0.1)
-	_add_number(column, "target.acceleration", "平移加速度 / m·s⁻²", 0.1, 50, 0.1)
-	_add_number(column, "target.heading", "平移方向 / °", -180, 180, 1)
-	_add_number(column, "target.travel", "往返半程 / m", 0.1, 10, 0.1)
-	_add_toggle(column, "target.rotate", "开启自转")
-	_add_number(column, "target.omega", "旋转速度 / rad·s⁻¹", -25, 25, 0.1)
-	_add_number(column, "target.module_width", "模块外宽 / m", 0.05, 0.3, 0.001)
-	_add_number(column, "target.module_height", "模块外高 / m", 0.04, 0.3, 0.001)
-	_add_number(column, "target.armor_width", "命中区宽（近似）/ m", 0.05, 0.3, 0.005)
-	_add_number(column, "target.armor_height", "命中区高（近似）/ m", 0.04, 0.3, 0.001)
-	_add_number(column, "target.lightbar_spacing", "灯条间距 / m", 0.05, 0.3, 0.005)
-	_section(column, "02  发射与响应")
-	_add_number(column, "weapon.speed", "弹速 / m·s⁻¹", 1, 100, 0.5)
-	_add_number(column, "weapon.damage", "单发伤害 / HP", 0, 10000, 1)
-	_add_number(column, "weapon.rate", "射频 / Hz", 0.1, 50, 0.5)
-	_add_number(column, "weapon.delay", "发射延迟 / ms", 0, 1000, 1)
-	_add_number(column, "gimbal.max_speed", "云台限速 / rad·s⁻¹", 0.1, 20, 0.1)
-	_add_number(column, "gimbal.max_acceleration", "角加速度 / rad·s⁻²", 0.1, 500, 1)
-	_section(column, "03  相机")
+	_add_number(column, "target.max_health", "Set HP", 0, 10000, 1)
+	_add_number(column, "target.center.x", "Initial Distance / m", 1, 20, 0.1)
+	_add_slider(column, "target.center.z", "Ref Armor Bottom Edge", 0.001, 0.4)
+	_add_slider(column, "target.radius", "Armor Extension", 0.05, Presets.MAX_EXTENT)
+	_add_slider(column, "target.height_difference", "Armor Height Offset", -0.1, 0.1)
+	column.add_child(_label("Bottom edge 1–400 mm · Height diff ≤100 mm", 12, Color("91acbb")))
+	_add_toggle(column, "target.translate", "Enable Translation")
+	_add_number(column, "target.speed", "Translation Speed / m·s⁻¹", 0, 10, 0.1)
+	_add_number(column, "target.acceleration", "Translation Accel / m·s⁻²", 0.1, 50, 0.1)
+	_add_number(column, "target.heading", "Translation Heading / °", -180, 180, 1)
+	_add_number(column, "target.travel", "Half Travel / m", 0.1, 10, 0.1)
+	_add_toggle(column, "target.rotate", "Enable Spin")
+	_add_number(column, "target.omega", "Spin Speed / rad·s⁻¹", -25, 25, 0.1)
+	_add_number(column, "target.module_width", "Module Outer Width / m", 0.05, 0.3, 0.001)
+	_add_number(column, "target.module_height", "Module Outer Height / m", 0.04, 0.3, 0.001)
+	_add_number(column, "target.armor_width", "Hit Zone Width (approx) / m", 0.05, 0.3, 0.005)
+	_add_number(column, "target.armor_height", "Hit Zone Height (approx) / m", 0.04, 0.3, 0.001)
+	_add_number(column, "target.lightbar_spacing", "Light Bar Spacing / m", 0.05, 0.3, 0.005)
+	_section(column, "02  Weapon & Gimbal")
+	_add_number(column, "weapon.speed", "Muzzle Velocity / m·s⁻¹", 1, 100, 0.5)
+	_add_number(column, "weapon.damage", "Damage per Shot / HP", 0, 10000, 1)
+	_add_number(column, "weapon.rate", "Rate of Fire / Hz", 0.1, 50, 0.5)
+	_add_number(column, "weapon.delay", "Fire Delay / ms", 0, 1000, 1)
+	_add_number(column, "gimbal.max_speed", "Gimbal Max Speed / rad·s⁻¹", 0.1, 20, 0.1)
+	_add_number(column, "gimbal.max_acceleration", "Angular Accel / rad·s⁻²", 0.1, 500, 1)
+	_section(column, "03  Camera")
 	camera_resolution = OptionButton.new()
 	for size in CAMERA_RESOLUTIONS:
 		camera_resolution.add_item("%d × %d" % [size.x, size.y])
 		camera_resolution.set_item_metadata(camera_resolution.item_count - 1, size)
 	camera_resolution.item_selected.connect(_camera_resolution_selected)
 	column.add_child(camera_resolution)
-	_add_number(column, "camera.width", "图像宽 / px", 160, 3840, 1)
-	_add_number(column, "camera.height", "图像高 / px", 120, 2160, 1)
-	_add_number(column, "camera.vertical_fov", "垂直视场角 / °", 10, 120, 1)
-	_add_slider(column, "camera.brightness_gain", "相机曝光增益 / ×", 0, 4)
+	_add_number(column, "camera.width", "Image Width / px", 160, 3840, 1)
+	_add_number(column, "camera.height", "Image Height / px", 120, 2160, 1)
+	_add_number(column, "camera.vertical_fov", "Vertical FOV / °", 10, 120, 1)
+	_add_slider(column, "camera.brightness_gain", "Exposure Gain / ×", 0, 4)
 	fields["camera.brightness_gain"].step = 0.01
 	fields["camera.brightness_gain"].value_changed.connect(func(value: float):
-		slider_labels["camera.brightness_gain"].text = "相机曝光增益 %.2f× · 低于 1 减少曝光" % value)
-	column.add_child(_label("分辨率与内参同步更新，保留本轮统计。", 12, Color("91acbb"), true))
-	_section(column, "04  可替换模型")
-	armor_label = _label("装甲：内置灯条与贴图", 13, Color("91acbb"))
+		slider_labels["camera.brightness_gain"].text = "Exposure Gain %.2f× · below 1 reduces exposure" % value)
+	column.add_child(_label("Resolution and intrinsics update together; round stats are preserved.", 12, Color("91acbb"), true))
+	_section(column, "04  Custom Models")
+	armor_label = _label("Armor: built-in light bars & textures", 13, Color("91acbb"))
 	column.add_child(armor_label)
-	_add_button(column, "选择装甲 GLB / glTF", _choose_model)
-	_add_button(column, "恢复内置外观", func():
+	_add_button(column, "Choose Armor GLB / glTF", _choose_model)
+	_add_button(column, "Restore Built-in Appearance", func():
 		selected_armor = ""
 		_update_model_labels()
 		_apply_fields())
-	column.add_child(_label("参数修改立即生效；修改血量会设置当前血量。", 12, Color("91acbb"), true))
+	column.add_child(_label("Parameter changes take effect immediately; editing HP sets current HP.", 12, Color("91acbb"), true))
 	var manual_panel = PanelContainer.new()
 	manual_panel.position = Vector2(356, 156)
 	manual_panel.custom_minimum_size = Vector2(290, 0)
@@ -331,32 +331,32 @@ func _build_ui() -> void:
 	var manual_column = VBoxContainer.new()
 	manual_column.add_theme_constant_override("separation", 8)
 	manual_panel.add_child(manual_column)
-	manual_column.add_child(_label("云台控制  /  GIMBAL", 13, Color("5be2d4")))
+	manual_column.add_child(_label("Gimbal Control  /  GIMBAL", 13, Color("5be2d4")))
 	yaw_input = _manual_angle(manual_column, "Yaw / °", -180, 180)
-	pitch_input = _manual_angle(manual_column, "Pitch / ° · 上负", rad_to_deg(model.settings.gimbal.pitch_min), rad_to_deg(model.settings.gimbal.pitch_max))
+	pitch_input = _manual_angle(manual_column, "Pitch / ° · up is negative", rad_to_deg(model.settings.gimbal.pitch_min), rad_to_deg(model.settings.gimbal.pitch_max))
 	aim_button = Button.new()
-	aim_button.text = "按住跟踪 / F"
+	aim_button.text = "Hold to Track / F"
 	aim_button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
 	aim_button.keep_pressed_outside = true
 	manual_column.add_child(aim_button)
 	fire_button = Button.new()
-	fire_button.text = "按住发射 / Space"
+	fire_button.text = "Hold to Fire / Space"
 	fire_button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
 	fire_button.keep_pressed_outside = true
 	manual_column.add_child(fire_button)
 	remote = CheckButton.new()
-	remote.text = "本机自瞄控制"
+	remote.text = "Local Auto-Aim Control"
 	remote.button_pressed = bridge.enabled
 	remote.disabled = not bridge.bound
 	remote.toggled.connect(func(value): bridge.set_enabled(value))
 	manual_column.add_child(remote)
-	_section(column, "05  场景操作")
-	_add_button(column, "R  重置本轮", _reset_current)
-	_add_button(column, "V  切换主视角", _toggle_view)
-	_add_button(column, "保存当前配置", _save_config)
-	_add_button(column, "导出统计与事件", _export_stats)
-	_add_button(column, "保存云台图像", _capture_sensor)
-	column.add_child(_label("方向键调云台 · 右键拖动观察\n滚轮缩放 · 网格间距 1 m", 12, Color("91acbb")))
+	_section(column, "05  Scene Controls")
+	_add_button(column, "R  Reset Round", _reset_current)
+	_add_button(column, "V  Toggle View", _toggle_view)
+	_add_button(column, "Save Current Config", _save_config)
+	_add_button(column, "Export Stats & Events", _export_stats)
+	_add_button(column, "Save Gimbal Image", _capture_sensor)
+	column.add_child(_label("Arrow keys: aim · Right-drag: orbit\nScroll: zoom · Grid spacing 1 m", 12, Color("91acbb")))
 	var header = PanelContainer.new()
 	header.position = Vector2(356, 18)
 	header.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -385,7 +385,7 @@ func _build_ui() -> void:
 	ui_root.add_child(picture)
 	var picture_column = VBoxContainer.new()
 	picture.add_child(picture_column)
-	picture_column.add_child(_label("云台相机  /  CAMERA", 13, Color("91acbb")))
+	picture_column.add_child(_label("Gimbal Camera  /  CAMERA", 13, Color("91acbb")))
 	var frame = TextureRect.new()
 	frame.texture = world.sensor_viewport.get_texture()
 	frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -412,7 +412,7 @@ func _build_ui() -> void:
 	footer.add_child(footer_column)
 	event_label = _label("", 14)
 	footer_column.add_child(event_label)
-	message_label = _label("RM 坐标：x 前 / y 左 / z 上 · Pitch 向下为正", 13, Color("91acbb"), true)
+	message_label = _label("RM coords: x forward / y left / z up · Pitch positive downward", 13, Color("91acbb"), true)
 	footer_column.add_child(message_label)
 	model_dialog = FileDialog.new()
 	model_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
@@ -486,7 +486,7 @@ func _sync_camera_resolution() -> void:
 			return
 	if camera_resolution.item_count > CAMERA_RESOLUTIONS.size():
 		camera_resolution.remove_item(camera_resolution.item_count - 1)
-	camera_resolution.add_item("自定义 %d × %d" % [size.x, size.y])
+	camera_resolution.add_item("Custom %d × %d" % [size.x, size.y])
 	camera_resolution.set_item_metadata(camera_resolution.item_count - 1, size)
 	camera_resolution.select(camera_resolution.item_count - 1)
 
@@ -521,7 +521,7 @@ func _apply_fields(changed_path: String = "") -> void:
 		if not path.is_empty():
 			var test_model = preload("res://scripts/visual_assets.gd").load_model(path)
 			if test_model == null:
-				message_label.text = "模型加载失败，参数未应用：" + path.get_file()
+				message_label.text = "Model load failed, settings not applied: " + path.get_file()
 				return
 			test_model.free()
 	var error = Settings.validate(s)
@@ -537,7 +537,7 @@ func _apply_fields(changed_path: String = "") -> void:
 		world.rebuild_target()
 	world.update_world()
 	_update_status()
-	message_label.text = "参数已生效 · " + Presets.ROBOTS[s.appearance.robot].label
+	message_label.text = "Settings applied · " + Presets.ROBOTS[s.appearance.robot].label
 
 
 func _reset_current() -> void:
@@ -545,7 +545,7 @@ func _reset_current() -> void:
 	bridge.reset_session()
 	if has_graphics:
 		world.rebuild_target()
-		pause_button.text = "P  暂停"
+		pause_button.text = "P  Pause"
 		yaw_input.value = 0
 		pitch_input.value = 0
 
@@ -555,7 +555,7 @@ func _toggle_pause() -> void:
 	model.stop()
 	model.session_id = "%d-%d" % [Time.get_ticks_usec(), randi()]
 	bridge.reset_session()
-	pause_button.text = "P  继续" if model.paused else "P  暂停"
+	pause_button.text = "P  Resume" if model.paused else "P  Pause"
 
 
 func _toggle_view() -> void:
@@ -592,16 +592,16 @@ func _update_status() -> void:
 		_updating_fields = false
 	status_label.text = "  %s   ·   T %.2f s   ·   %s   ·   %d FPS" % [
 		"PAUSED" if model.paused else "RUNNING", model.time, bridge.status, Engine.get_frames_per_second()]
-	stats_label.text = "  命中 %d / %d    %.1f%%    发射 %d    飞行中 %d" % [
+	stats_label.text = "  Hits %d / %d    %.1f%%    Fired %d    In-flight %d" % [
 		s.hit, s.resolved, s.hit_rate * 100.0, s.fired, s.in_flight]
-	health_label.text = "  靶车血量 %d / %d HP  ·  %s  ·  累计伤害 %d  ·  击毁 %d" % [
-		model.health, model.max_health, "存活" if model.health > 0 else "已击毁 / 灯条熄灭", s.damage, s.kills]
+	health_label.text = "  Target HP %d / %d HP  ·  %s  ·  Total Damage %d  ·  Kills %d" % [
+		model.health, model.max_health, "Alive" if model.health > 0 else "Destroyed / lights off", s.damage, s.kills]
 	health_label.add_theme_color_override("font_color", Color("5be2d4") if model.health > 0 else Color("ff6a72"))
-	event_label.text = "  落地 %d  ·  离靶/超时 %d  ·  命中/秒 %.2f\n  实际 Yaw %.2f°  /  Pitch %.2f°    本机指令 %d / 拒绝 %d" % [
+	event_label.text = "  Ground %d  ·  OOB/Timeout %d  ·  Hits/s %.2f\n  Actual Yaw %.2f°  /  Pitch %.2f°    Local cmds %d / rejected %d" % [
 		s.ground, s.expired, s.hits_per_second, rad_to_deg(model.yaw),
 		rad_to_deg(model.pitch), bridge.received, bridge.rejected]
 	if tracking_held:
-		message_label.text = "F 连续跟踪 · 装甲 %d · Space 发射" % tracking_armor if tracking_armor >= 0 else "F 连续跟踪 · 暂无可瞄准的存活装甲"
+		message_label.text = "F continuous track · armor %d · Space fire" % tracking_armor if tracking_armor >= 0 else "F continuous track · no live armor in range"
 
 
 func _choose_model() -> void:
@@ -615,13 +615,13 @@ func _model_selected(path: String) -> void:
 
 
 func _update_model_labels() -> void:
-	armor_label.text = "装甲：" + (selected_armor.get_file() if not selected_armor.is_empty() else "内置灯条与贴图")
+	armor_label.text = "Armor: " + (selected_armor.get_file() if not selected_armor.is_empty() else "built-in light bars & textures")
 
 
 func _save_config() -> void:
 	var path = "user://last_scenario.cfg"
 	var error = Settings.save_file(model.settings, path)
-	message_label.text = "配置已保存：" + ProjectSettings.globalize_path(path) if error == OK else "保存配置失败"
+	message_label.text = "Config saved: " + ProjectSettings.globalize_path(path) if error == OK else "Failed to save config"
 
 
 func _export_stats() -> void:
@@ -629,13 +629,13 @@ func _export_stats() -> void:
 	var path = "res://captures/round_%s.json" % Time.get_datetime_string_from_system().replace(":", "-")
 	var file = FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
-		message_label.text = "导出失败：无法写入 captures/"
+		message_label.text = "Export failed: cannot write to captures/"
 		return
 	var result = model.snapshot()
 	result["scenario"] = _json_settings(model.settings)
 	result["events"] = model.events
 	file.store_string(JSON.stringify(result, "  "))
-	message_label.text = "统计已导出：" + ProjectSettings.globalize_path(path)
+	message_label.text = "Stats exported: " + ProjectSettings.globalize_path(path)
 
 
 func _capture_sensor() -> void:
@@ -643,7 +643,7 @@ func _capture_sensor() -> void:
 	await RenderingServer.frame_post_draw
 	var path = "res://captures/camera_%d.png" % Time.get_ticks_msec()
 	var error = world.sensor_viewport.get_texture().get_image().save_png(path)
-	message_label.text = "相机图像已保存：" + ProjectSettings.globalize_path(path) if error == OK else "保存图像失败"
+	message_label.text = "Camera image saved: " + ProjectSettings.globalize_path(path) if error == OK else "Failed to save image"
 
 
 func _capture(path: String) -> void:
@@ -722,8 +722,8 @@ func _update_height_limits() -> void:
 	var lower = height.value
 	difference.min_value = maxf(-0.1, 0.001 - lower)
 	difference.max_value = minf(0.1, 0.4 - lower)
-	slider_labels["target.center.z"].text = "基准装甲下沿 %.0f mm" % (lower * 1000.0)
-	slider_labels["target.height_difference"].text = "两组装甲高度差 %+.0f mm" % (difference.value * 1000.0)
+	slider_labels["target.center.z"].text = "Ref Armor Bottom Edge %.0f mm" % (lower * 1000.0)
+	slider_labels["target.height_difference"].text = "Armor Height Offset %+.0f mm" % (difference.value * 1000.0)
 	_updating_fields = previous
 
 
@@ -732,13 +732,13 @@ func _update_spacing_limits(target: Dictionary) -> String:
 	probe.radius = Presets.minimum_radius(target)
 	var minimum = ceil((Presets.extent(probe) - 1e-9) * 1000.0) / 1000.0
 	if minimum > Presets.MAX_EXTENT:
-		return "当前装甲尺寸和高度差无法在 600 mm 内保持间隙，请减小尺寸或高度差。"
+		return "Current armor size and height offset cannot maintain clearance within 600 mm — reduce size or height offset."
 	var previous = _updating_fields
 	_updating_fields = true
 	var spacing: HSlider = fields["target.radius"]
 	spacing.min_value = minimum
 	spacing.max_value = Presets.MAX_EXTENT
-	slider_labels["target.radius"].text = "装甲伸展 %.0f mm · 上限 600 mm" % (spacing.value * 1000.0)
+	slider_labels["target.radius"].text = "Armor Extension %.0f mm · max 600 mm" % (spacing.value * 1000.0)
 	_updating_fields = previous
 	return ""
 
