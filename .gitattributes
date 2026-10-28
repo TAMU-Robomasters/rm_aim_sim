@@ -1,0 +1,20 @@
+# Always use LF in the repo — prevents bash\r errors in WSL2
+* text=auto eol=lf
+
+# Explicitly force LF for anything executable or script-like
+*.sh        eol=lf
+*.py        eol=lf
+*.gd        eol=lf
+*.cfg       eol=lf
+*.md        eol=lf
+*.json      eol=lf
+*.tscn      eol=lf
+*.import    eol=lf
+
+# Binaries — no line ending translation
+*.png       binary
+*.jpg       binary
+*.glb       binary
+*.gltf      binary
+*.ttf       binary
+*.otf       binary
